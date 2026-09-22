@@ -175,6 +175,7 @@ final class PrompterController: NSObject {
 
     func play() {
         guard !isPlaying, !isCountingDown, !isEditing else { return }
+        guard words > 0 else { return view.showToast("Add a script first") }
         if view.scrollY >= view.endY - 1 { restart() }
         if Prefs.countdown > 0 && view.scrollY <= view.startY + 1 && elapsed == 0 {
             countdownLeft = Prefs.countdown

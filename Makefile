@@ -5,7 +5,7 @@ BUNDLE  = $(BUILD)/$(APP).app
 SOURCES = $(wildcard Sources/*.swift)
 FLAGS   = -Osize -wmo -swift-version 5 -Xlinker -dead_strip
 
-.PHONY: all run clean icon
+.PHONY: all run install release clean icon
 
 all: $(BUNDLE)
 
@@ -26,6 +26,17 @@ $(BUNDLE): $(BUILD)/arm64/$(APP) $(BUILD)/x86_64/$(APP) Resources/Info.plist Res
 run: $(BUNDLE)
 	-@pkill -x $(APP); sleep 0.3
 	open $(BUNDLE)
+
+install: $(BUNDLE)
+	-@pkill -x $(APP); sleep 0.3
+	rm -rf /Applications/$(APP).app
+	cp -R $(BUNDLE) /Applications/
+	open /Applications/$(APP).app
+
+# Zipped app for GitHub releases.
+release: clean $(BUNDLE)
+	cd $(BUILD) && ditto -c -k --sequesterRsrc --keepParent $(APP).app $(APP).zip
+	@ls -lh $(BUILD)/$(APP).zip | awk '{print "$(BUILD)/$(APP).zip", $$5}'
 
 icon:
 	swift scripts/make-icon.swift .
