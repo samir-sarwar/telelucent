@@ -83,7 +83,7 @@ for (name, px) in [("16x16", 16), ("16x16@2x", 32), ("32x32", 32), ("32x32@2x", 
                    ("128x128@2x", 256), ("256x256", 256), ("256x256@2x", 512)] {
     try! render(px).write(to: iconset.appendingPathComponent("icon_\(name).png"))
 }
-try! render(512).write(to: root.appendingPathComponent("docs/icon.png"))
+try! render(256).write(to: root.appendingPathComponent("docs/icon.png"))
 
 let out = root.appendingPathComponent("Resources/AppIcon.icns").path
 let task = Process()
