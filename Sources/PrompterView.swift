@@ -13,10 +13,20 @@ final class PrompterView: NSView {
     private let fadeView = NSView()
     private let fadeMask = CAGradientLayer()
     private let guideView = GuideView()
+    let hud = HUDView()
+    let countdown = CountdownView()
+    private let toast = ToastView()
     private(set) var lineHeight: CGFloat = 40
 
     var opacity: CGFloat = 0.6 { didSet { needsDisplay = true } }
     var showsGuide = true { didSet { guideView.isHidden = !showsGuide || isEditing } }
+    var showsHUD = true {
+        didSet {
+            guard showsHUD != oldValue else { return }
+            hud.isHidden = !showsHUD
+            layoutContents()
+        }
+    }
 
     /// While editing, the real text view replaces the tiled canvas.
     var isEditing = false {
@@ -73,6 +83,13 @@ final class PrompterView: NSView {
         fadeView.addSubview(scrollView)
         addSubview(fadeView)
         addSubview(guideView)
+        addSubview(hud)
+        addSubview(countdown)
+        addSubview(toast)
+    }
+
+    func showToast(_ text: String) {
+        toast.show(text, in: bounds)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -129,7 +146,9 @@ final class PrompterView: NSView {
 
     // MARK: Geometry
 
-    private var guideY: CGFloat { (bounds.height * Self.guideFraction).rounded() }
+    /// The script area stops above the timer strip so the two never overlap.
+    private var textAreaHeight: CGFloat { max(40, bounds.height - (showsHUD ? 24 : 0)) }
+    private var guideY: CGFloat { (textAreaHeight * Self.guideFraction).rounded() }
 
     var textHeight: CGFloat { canvas.textHeight }
 
@@ -156,18 +175,20 @@ final class PrompterView: NSView {
     func layoutContents() {
         let b = bounds
         let keep = progress
-        fadeView.frame = b
+        fadeView.frame = NSRect(x: 0, y: 0, width: b.width, height: textAreaHeight)
         canvas.frame = fadeView.bounds
         scrollView.frame = fadeView.bounds
         textView.setFrameSize(NSSize(width: scrollView.contentSize.width, height: textView.frame.height))
         scrollY = startY + CGFloat(keep) * (endY - startY)
 
         guideView.frame = NSRect(x: 0, y: guideY - lineHeight / 2, width: b.width, height: lineHeight)
+        hud.frame = NSRect(x: 16, y: b.height - 23, width: b.width - 32, height: 19)
+        countdown.frame = b
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         fadeMask.frame = fadeView.bounds
-        let fade = Double(min(46, b.height * 0.2) / max(b.height, 1))
+        let fade = Double(min(46, fadeView.bounds.height * 0.2) / max(fadeView.bounds.height, 1))
         fadeMask.colors = [NSColor.clear.cgColor, NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
         fadeMask.locations = [0, NSNumber(value: fade), NSNumber(value: 1 - fade), 1]
         CATransaction.commit()

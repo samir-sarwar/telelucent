@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "restart": prompter.restart()
             case "faster": prompter.changeSpeed(by: 10)
             case "slower": prompter.changeSpeed(by: -10)
+            case "bigger": prompter.changeFontSize(by: 2)
+            case "smaller": prompter.changeFontSize(by: -2)
             default: break
             }
         }

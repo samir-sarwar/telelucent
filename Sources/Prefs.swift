@@ -23,4 +23,9 @@ enum Prefs {
     @Pref("centered") static var centered = false
     @Pref("guide") static var guide = true
     @Pref("hideFromCapture") static var hideFromCapture = true
+    @Pref("showTimer") static var showTimer = true
+    /// Seconds of 3·2·1 before scrolling starts from the top. 0 turns it off.
+    @Pref("countdown") static var countdown = 3
+    /// Planned length of the talk in seconds, 0 for none.
+    @Pref("talkLength") static var talkLength: Double = 0
 }
