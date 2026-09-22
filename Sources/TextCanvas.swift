@@ -39,7 +39,8 @@ final class TextCanvas: NSView {
     }
 
     override var isFlipped: Bool { true }
-    override var mouseDownCanMoveWindow: Bool { true }
+    // Moves are done by hand in mouseDown so double-clicks aren't swallowed by a window drag.
+    override var mouseDownCanMoveWindow: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     init(storage: NSTextStorage) {
