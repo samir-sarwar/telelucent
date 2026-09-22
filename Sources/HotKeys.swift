@@ -21,6 +21,14 @@ enum ShortcutModifiers: Int, CaseIterable {
         }
     }
 
+    var eventFlags: CGEventFlags {
+        switch self {
+        case .controlOption: return [.maskControl, .maskAlternate]
+        case .controlShift: return [.maskControl, .maskShift]
+        case .controlOptionCommand: return [.maskControl, .maskAlternate, .maskCommand]
+        }
+    }
+
     var symbols: String {
         switch self {
         case .controlOption: return "⌃⌥"

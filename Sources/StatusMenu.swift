@@ -149,9 +149,16 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 self?.onShortcutsChanged?()
             }
         }
+        let symbols = Prefs.hotkeyModifiers.symbols
+        var scrollTitle = "Scroll Anywhere with \(symbols) + Trackpad"
+        if Prefs.scrollAnywhere && !ScrollTap.isTrusted { scrollTitle += " (needs Accessibility)" }
         items.append(submenu("Shortcuts", [
             ClosureItem("Global Shortcuts", checked: Prefs.hotkeys) { [weak self] in
                 Prefs.hotkeys.toggle()
+                self?.onShortcutsChanged?()
+            },
+            ClosureItem(scrollTitle, checked: Prefs.scrollAnywhere) { [weak self] in
+                Prefs.scrollAnywhere.toggle()
                 self?.onShortcutsChanged?()
             },
             .separator(),

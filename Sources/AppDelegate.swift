@@ -4,14 +4,20 @@ import Carbon.HIToolbox
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var prompter: PrompterController!
     private var statusMenu: StatusMenu!
+    private var trustPoll: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
         prompter = PrompterController()
         statusMenu = StatusMenu(prompter: prompter)
-        statusMenu.onShortcutsChanged = { [weak self] in self?.registerHotKeys() }
+        statusMenu.onShortcutsChanged = { [weak self] in
+            self?.registerHotKeys()
+            self?.updateScrollTap(prompting: true)
+        }
         prompter.connectToolbar { [weak self] button in self?.statusMenu.popUp(below: button) }
         registerHotKeys()
+        ScrollTap.shared.onScroll = { [weak self] dy in self?.prompter.scrollBy(dy) }
+        updateScrollTap(prompting: false)
         prompter.show()
     }
 
@@ -64,6 +70,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .init(keyCode: kVK_ANSI_R, handler: tap { p.restart() }),
             .init(keyCode: kVK_ANSI_H, handler: tap { p.toggleVisible() }),
         ], modifiers: Prefs.hotkeyModifiers.carbon)
+    }
+
+    /// Starts or stops scroll-from-anywhere. Without Accessibility permission it asks
+    /// for it (only when the user just turned the option on) and waits for the grant.
+    func updateScrollTap(prompting: Bool) {
+        trustPoll?.invalidate()
+        trustPoll = nil
+        ScrollTap.shared.modifiers = Prefs.hotkeyModifiers.eventFlags
+        guard Prefs.scrollAnywhere else { return ScrollTap.shared.stop() }
+        if ScrollTap.isTrusted {
+            ScrollTap.shared.start()
+            return
+        }
+        if prompting { ScrollTap.requestTrust() }
+        trustPoll = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
+            guard ScrollTap.isTrusted else { return }
+            timer.invalidate()
+            self?.updateScrollTap(prompting: false)
+        }
     }
 
     /// telelucent://play, /pause, /toggle, /restart, /faster, /slower – handy for

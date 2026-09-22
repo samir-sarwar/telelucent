@@ -27,6 +27,7 @@ enum Prefs {
     @Pref("hideFromCapture") static var hideFromCapture = true
     @Pref("showTimer") static var showTimer = true
     @Pref("hotkeys") static var hotkeys = true
+    @Pref("scrollAnywhere") static var scrollAnywhere = false
     @Pref("hotkeyModifiers") static var hotkeyModifiersRaw = 0
     static var hotkeyModifiers: ShortcutModifiers {
         get { ShortcutModifiers(rawValue: hotkeyModifiersRaw) ?? .controlShift }
