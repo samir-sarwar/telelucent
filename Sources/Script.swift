@@ -26,9 +26,9 @@ enum Script {
 
     This prompter floats over everything, stays see-through, and never shows up when you share your screen. Read your notes while looking right at the camera.
 
-    Press ⌃⌥P to start scrolling and again to pause. Hold ⌃⌥↓ to skim ahead or ⌃⌥↑ to go back. None of this moves your mouse or takes focus from the app you're presenting.
+    Press ⌃⇧P to start scrolling and again to pause. Hold ⌃⇧↓ to skim ahead or ⌃⇧↑ to go back. None of this moves your mouse or takes focus from the app you're presenting.
 
-    ⌃⌥→ and ⌃⌥← change the speed. ⌃⌥= and ⌃⌥− change the text size.
+    ⌃⇧→ and ⌃⇧← change the speed. ⌃⇧= and ⌃⇧− change the text size.
 
     Drag the edges to resize the prompter, or drag the text to move it. Keep it close to your camera so your eyes stay on your audience.
 

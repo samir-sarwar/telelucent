@@ -24,6 +24,12 @@ enum Prefs {
     @Pref("guide") static var guide = true
     @Pref("hideFromCapture") static var hideFromCapture = true
     @Pref("showTimer") static var showTimer = true
+    @Pref("hotkeys") static var hotkeys = true
+    @Pref("hotkeyModifiers") static var hotkeyModifiersRaw = 0
+    static var hotkeyModifiers: ShortcutModifiers {
+        get { ShortcutModifiers(rawValue: hotkeyModifiersRaw) ?? .controlShift }
+        set { hotkeyModifiersRaw = newValue.rawValue }
+    }
     /// Seconds of 3·2·1 before scrolling starts from the top. 0 turns it off.
     @Pref("countdown") static var countdown = 3
     /// Planned length of the talk in seconds, 0 for none.

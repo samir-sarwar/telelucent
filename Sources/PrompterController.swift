@@ -12,8 +12,9 @@ final class PrompterController: NSObject {
 
     private(set) var isPlaying = false
     private(set) var words = 0
-    /// Extra velocity (points/s) while a scroll shortcut is held down.
+    /// Direction of a held scroll shortcut (+1, -1 or 0) and how long it's been held.
     private var nudge: CGFloat = 0
+    private var nudgeHeld = 0.0
     /// Scroll offset with sub-pixel precision; the view snaps what we hand it to pixels.
     private var position: CGFloat = 0
     private var lastApplied: CGFloat = 0
@@ -52,6 +53,17 @@ final class PrompterController: NSObject {
 
     func show() {
         panel.orderFrontRegardless()
+        onChange?()
+    }
+
+    func hide() {
+        pause()
+        panel.orderOut(nil)
+        onChange?()
+    }
+
+    func toggleVisible() {
+        panel.isVisible ? hide() : show()
     }
 
     // MARK: Playback
@@ -131,7 +143,8 @@ final class PrompterController: NSObject {
 
     /// Hold-to-scroll: direction is +1 (forward), -1 (back) or 0 (released).
     func nudge(_ direction: CGFloat) {
-        nudge = direction * max(view.lineHeight * 5, 120)
+        nudge = direction
+        nudgeHeld = 0
         updateLink()
     }
 
@@ -180,7 +193,12 @@ final class PrompterController: NSObject {
         let actual = view.scrollY
         if abs(actual - lastApplied) > 0.75 { position = actual } // trackpad scrolled meanwhile
 
-        var velocity = nudge
+        // Holding starts at about two lines a second and speeds up to eight.
+        var velocity: CGFloat = 0
+        if nudge != 0 {
+            nudgeHeld += dt
+            velocity = nudge * view.lineHeight * CGFloat(2 + 6 * min(nudgeHeld / 1.2, 1))
+        }
         if isPlaying { velocity += pointsPerSecond }
         position = min(max(position + velocity * CGFloat(dt), view.startY), view.endY)
         view.scrollY = position
