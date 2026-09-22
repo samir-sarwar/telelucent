@@ -17,6 +17,20 @@ enum Script {
         try? text.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
+    /// Plain text from a .txt/.md file, or from anything AppKit can read as rich text
+    /// (RTF, Word, OpenDocument, HTML).
+    static func read(_ url: URL) throws -> String {
+        let text: String
+        switch url.pathExtension.lowercased() {
+        case "txt", "text", "md", "markdown", "":
+            var encoding = String.Encoding.utf8
+            text = try String(contentsOf: url, usedEncoding: &encoding)
+        default:
+            text = try NSAttributedString(url: url, options: [:], documentAttributes: nil).string
+        }
+        return text.replacingOccurrences(of: "\r\n", with: "\n")
+    }
+
     static func wordCount(_ text: String) -> Int {
         text.split(whereSeparator: \.isWhitespace).count
     }

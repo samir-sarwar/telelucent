@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 /// Owns the prompter panel and everything that happens in it.
 final class PrompterController: NSObject {
@@ -33,8 +34,36 @@ final class PrompterController: NSObject {
         super.init()
         panel.contentView = view
         view.canvas.onScroll = { [weak self] dy in self?.scrollBy(dy) }
+        view.canvas.onDoubleClick = { [weak self] in self?.beginEditing() }
+        view.textView.onEscape = { [weak self] in self?.endEditing() }
+        view.onDropFile = { [weak self] url in self?.load(url) }
+        view.onDropText = { [weak self] text in self?.replaceScript(with: text) }
         applyPrefs()
         setScript(Script.load())
+    }
+
+    /// Hooks the toolbar buttons up. `menu` shows the settings menu under a button.
+    func connectToolbar(menu: @escaping (NSView) -> Void) {
+        view.toolbar.actions = ToolbarActions(
+            restart: { [weak self] in self?.restart() },
+            togglePlay: { [weak self] in self?.togglePlay() },
+            slower: { [weak self] in self?.changeSpeed(by: -10) },
+            faster: { [weak self] in self?.changeSpeed(by: 10) },
+            smaller: { [weak self] in self?.changeFontSize(by: -2) },
+            bigger: { [weak self] in self?.changeFontSize(by: 2) },
+            edit: { [weak self] in self?.beginEditing() },
+            menu: menu,
+            hide: { [weak self] in self?.hide() },
+            open: { [weak self] in self?.openScript() },
+            done: { [weak self] in self?.endEditing() }
+        )
+        changed()
+    }
+
+    /// Refreshes anything that mirrors playback state.
+    private func changed() {
+        view.toolbar.update(playing: isPlaying || isCountingDown, wpm: Int(Prefs.wpm))
+        onChange?()
     }
 
     func applyPrefs() {
@@ -53,13 +82,72 @@ final class PrompterController: NSObject {
 
     func show() {
         panel.orderFrontRegardless()
-        onChange?()
+        changed()
     }
 
     func hide() {
         pause()
         panel.orderOut(nil)
-        onChange?()
+        changed()
+    }
+
+    // MARK: Editing
+
+    var isEditing: Bool { view.isEditing }
+
+    /// Swaps in the editable text view with the caret on the line you were reading.
+    func beginEditing() {
+        guard !view.isEditing else { return }
+        pause()
+        let index = view.characterAtGuide
+        view.isEditing = true
+        NSApp.activate(ignoringOtherApps: true)
+        show()
+        panel.makeKeyAndOrderFront(nil)
+        panel.makeFirstResponder(view.textView)
+        let caret = NSRange(location: min(index, view.storage.length), length: 0)
+        view.textView.setSelectedRange(caret)
+        view.textView.scrollRangeToVisible(caret)
+        changed()
+    }
+
+    func endEditing() {
+        guard view.isEditing else { return }
+        let caret = view.textView.selectedRange().location
+        view.isEditing = false
+        view.restyle()
+        words = Script.wordCount(view.text)
+        Script.save(view.text)
+        view.scroll(toCharacter: caret)
+        panel.makeFirstResponder(nil)
+        NSApp.deactivate()
+        updateHUD()
+        changed()
+    }
+
+    func openScript() {
+        NSApp.activate(ignoringOtherApps: true)
+        let open = NSOpenPanel()
+        open.message = "Choose a script"
+        open.allowedContentTypes = [.plainText, .rtf, .rtfd, .html]
+            + ["md", "docx", "doc", "odt"].compactMap { UTType(filenameExtension: $0) }
+        guard open.runModal() == .OK, let url = open.url else { return }
+        load(url)
+    }
+
+    func load(_ url: URL) {
+        do {
+            replaceScript(with: try Script.read(url))
+            view.showToast("Opened \(url.lastPathComponent)")
+        } catch {
+            NSApp.activate(ignoringOtherApps: true)
+            NSAlert(error: error).runModal()
+        }
+    }
+
+    func replaceScript(with text: String) {
+        setScript(text)
+        Script.save(text)
     }
 
     func toggleVisible() {
@@ -84,7 +172,7 @@ final class PrompterController: NSObject {
     }
 
     func play() {
-        guard !isPlaying, !isCountingDown else { return }
+        guard !isPlaying, !isCountingDown, !isEditing else { return }
         if view.scrollY >= view.endY - 1 { restart() }
         if Prefs.countdown > 0 && view.scrollY <= view.startY + 1 && elapsed == 0 {
             countdownLeft = Prefs.countdown
@@ -92,7 +180,7 @@ final class PrompterController: NSObject {
             countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 self?.countdownTick()
             }
-            onChange?()
+            changed()
         } else {
             beginScrolling()
         }
@@ -104,7 +192,7 @@ final class PrompterController: NSObject {
         isPlaying = false
         updateLink()
         updateHUD()
-        onChange?()
+        changed()
     }
 
     /// Back to the first line with a fresh timer.
@@ -124,7 +212,7 @@ final class PrompterController: NSObject {
         Prefs.wpm = min(max(wpm.rounded(), Self.wpmRange.lowerBound), Self.wpmRange.upperBound)
         view.showToast("\(Int(Prefs.wpm)) wpm")
         updateHUD()
-        onChange?()
+        changed()
     }
 
     /// Picks the speed that gets through the rest of the script in `seconds`.
@@ -138,7 +226,7 @@ final class PrompterController: NSObject {
         Prefs.fontSize = min(max(Prefs.fontSize + delta, Self.fontRange.lowerBound), Self.fontRange.upperBound)
         view.setStyle(fontSize: Prefs.fontSize, centered: Prefs.centered)
         view.showToast("\(Int(Prefs.fontSize)) pt")
-        onChange?()
+        changed()
     }
 
     /// Hold-to-scroll: direction is +1 (forward), -1 (back) or 0 (released).
@@ -159,7 +247,7 @@ final class PrompterController: NSObject {
         startClock()
         updateLink()
         updateHUD()
-        onChange?()
+        changed()
     }
 
     private func countdownTick() {

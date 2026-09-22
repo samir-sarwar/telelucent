@@ -15,7 +15,15 @@ final class PrompterView: NSView {
     private let guideView = GuideView()
     let hud = HUDView()
     let countdown = CountdownView()
+    let toolbar = ToolbarView()
     private let toast = ToastView()
+    private let grip = ResizeGrip()
+    private let placeholder = makeLabel(size: 15)
+    private var isHovering = false
+    private var isDropTarget = false { didSet { needsDisplay = true } }
+    /// A file or some text was dropped on the prompter.
+    var onDropFile: ((URL) -> Void)?
+    var onDropText: ((String) -> Void)?
     private(set) var lineHeight: CGFloat = 40
 
     var opacity: CGFloat = 0.6 { didSet { needsDisplay = true } }
@@ -37,7 +45,10 @@ final class PrompterView: NSView {
             scrollView.isHidden = !isEditing
             canvas.isHidden = isEditing
             guideView.isHidden = !showsGuide || isEditing
+            toolbar.isEditing = isEditing
+            fadeView.layer?.mask = isEditing ? nil : fadeMask
             layoutContents()
+            updateChrome()
         }
     }
 
@@ -86,6 +97,16 @@ final class PrompterView: NSView {
         addSubview(hud)
         addSubview(countdown)
         addSubview(toast)
+
+        placeholder.stringValue = "Double-click to add your script, or drop a file here"
+        placeholder.alignment = .center
+        placeholder.textColor = NSColor.white.withAlphaComponent(0.5)
+        addSubview(placeholder)
+        addSubview(toolbar)
+        addSubview(grip)
+        toolbar.alphaValue = 0
+        grip.alphaValue = 0
+        registerForDraggedTypes([.fileURL, .string])
     }
 
     func showToast(_ text: String) {
@@ -95,8 +116,71 @@ final class PrompterView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     override func draw(_ dirtyRect: NSRect) {
+        let shape = NSBezierPath(roundedRect: bounds, xRadius: Self.cornerRadius, yRadius: Self.cornerRadius)
         NSColor.black.withAlphaComponent(opacity).setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: Self.cornerRadius, yRadius: Self.cornerRadius).fill()
+        shape.fill()
+        if isDropTarget {
+            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 1.5, dy: 1.5),
+                                    xRadius: Self.cornerRadius - 1.5, yRadius: Self.cornerRadius - 1.5)
+            ring.lineWidth = 3
+            NSColor.controlAccentColor.setStroke()
+            ring.stroke()
+        }
+    }
+
+    // MARK: Hover chrome
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                       owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        isHovering = true
+        updateChrome()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        isHovering = false
+        updateChrome()
+    }
+
+    /// Toolbar and resize grip only show while the pointer is over the prompter (or while editing).
+    private func updateChrome() {
+        let show = isHovering || isEditing
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.18
+            toolbar.animator().alphaValue = show ? 1 : 0
+            grip.animator().alphaValue = show ? 1 : 0
+        }
+    }
+
+    // MARK: Drag and drop
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard !isEditing else { return [] }
+        isDropTarget = true
+        return .copy
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        isDropTarget = false
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        isDropTarget = false
+        let pb = sender.draggingPasteboard
+        if let url = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])?.first as? URL {
+            onDropFile?(url)
+            return true
+        }
+        if let text = pb.string(forType: .string), !text.isEmpty {
+            onDropText?(text)
+            return true
+        }
+        return false
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -121,7 +205,7 @@ final class PrompterView: NSView {
         restyle()
     }
 
-    private func restyle() {
+    func restyle() {
         let font = NSFont.systemFont(ofSize: fontSize, weight: .semibold)
         let para = NSMutableParagraphStyle()
         para.lineHeightMultiple = 1.12
@@ -166,6 +250,14 @@ final class PrompterView: NSView {
         }
     }
 
+    /// Character sitting on the reading guide.
+    var characterAtGuide: Int { canvas.characterIndex(atViewY: guideY) }
+
+    /// Scrolls so the line holding `index` sits on the guide.
+    func scroll(toCharacter index: Int) {
+        scrollY = min(max(canvas.lineMidY(forCharacter: index) - guideY, startY), endY)
+    }
+
     /// 0 at the first line, 1 at the last.
     var progress: Double {
         let span = endY - startY
@@ -184,6 +276,11 @@ final class PrompterView: NSView {
         guideView.frame = NSRect(x: 0, y: guideY - lineHeight / 2, width: b.width, height: lineHeight)
         hud.frame = NSRect(x: 16, y: b.height - 23, width: b.width - 32, height: 19)
         countdown.frame = b
+        toolbar.frame.origin = NSPoint(x: ((b.width - toolbar.frame.width) / 2).rounded(), y: 8)
+        grip.frame = NSRect(x: b.width - 18, y: b.height - 18, width: 16, height: 16)
+        placeholder.isHidden = isEditing || storage.length > 0
+        let ph = placeholder.intrinsicContentSize.height
+        placeholder.frame = NSRect(x: 12, y: (textAreaHeight - ph) / 2, width: b.width - 24, height: ph)
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)

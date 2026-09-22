@@ -52,6 +52,13 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         build().forEach(menu.addItem)
     }
 
+    /// Same menu, popped up from the prompter's toolbar.
+    func popUp(below view: NSView) {
+        let menu = NSMenu()
+        build().forEach(menu.addItem)
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.height + 4), in: view)
+    }
+
     private func build() -> [NSMenuItem] {
         let p = prompter
         let mods = Prefs.hotkeyModifiers.flags
@@ -66,6 +73,9 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             ClosureItem(p.isPlaying || p.isCountingDown ? "Pause" : "Play", key: key("p"), modifiers: mods) { p.togglePlay() },
             ClosureItem("Back to Top", key: key("r"), modifiers: mods) { p.restart() },
             ClosureItem(p.panel.isVisible ? "Hide Prompter" : "Show Prompter", key: key("h"), modifiers: mods) { p.toggleVisible() },
+            .separator(),
+            ClosureItem(p.isEditing ? "Done Editing" : "Edit Script…") { p.isEditing ? p.endEditing() : p.beginEditing() },
+            ClosureItem("Open Script…") { p.openScript() },
             .separator(),
         ]
 

@@ -10,8 +10,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         prompter = PrompterController()
         statusMenu = StatusMenu(prompter: prompter)
         statusMenu.onShortcutsChanged = { [weak self] in self?.registerHotKeys() }
+        prompter.connectToolbar { [weak self] button in self?.statusMenu.popUp(below: button) }
         registerHotKeys()
         prompter.show()
+    }
+
+    /// Launching the app again (Finder, Spotlight) brings the prompter back, handy if it was hidden.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        prompter.show()
+        return false
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if prompter.isEditing { Script.save(prompter.view.text) }
     }
 
     /// There's no menu bar while running as an accessory, but the key equivalents
