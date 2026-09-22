@@ -24,7 +24,7 @@ The people watching only see your slides.
 
 ## Features
 
-- **Invisible to screen sharing and recordings.** macOS leaves the prompter out of anything that captures the screen: Zoom, Meet, Teams, OBS, QuickTime, screenshots.
+- **Invisible to screen sharing and recordings.** macOS leaves the prompter, and its menu bar icon, out of anything that captures the screen: Zoom, Meet, Teams, OBS, QuickTime, screenshots.
 - **See-through.** Pick how dark the background is, or add a frosted blur.
 - **Never steals focus.** Clicking or scrolling the prompter keeps the app you're presenting in front.
 - **Hands on the keyboard.** Global shortcuts play, pause, scroll, change speed and resize text from any app, so your pointer never has to wander over to an empty patch of your shared screen.
@@ -169,7 +169,7 @@ The other commands are `play`, `pause`, `restart`, `faster`, `slower`, `bigger`,
 
 ## How it works
 
-- **Hidden from capture.** The prompter window sets [`NSWindow.sharingType`](https://developer.apple.com/documentation/appkit/nswindow/sharingtype) to `.none`, which tells macOS to leave it out of screen capture. Screen-sharing and recording apps go through the system's capture APIs, which respect that. I tested it against ScreenCaptureKit and `screencapture` on macOS 15: captures with the prompter showing and hidden came out pixel-for-pixel identical.
+- **Hidden from capture.** The prompter window sets [`NSWindow.sharingType`](https://developer.apple.com/documentation/appkit/nswindow/sharingtype) to `.none`, which tells macOS to leave it out of screen capture. Screen-sharing and recording apps go through the system's capture APIs, which respect that. I tested it against ScreenCaptureKit and `screencapture` on macOS 15: captures with the prompter showing and hidden came out pixel-for-pixel identical. The menu bar icon's window gets the same treatment.
 - **Never takes focus.** It's a non-activating floating panel. It stays above your other windows on every Space without ever becoming the frontmost app.
 - **Shortcuts without permissions.** Global shortcuts use the system hot key API, which doesn't need Accessibility access. Only the optional scroll-anywhere feature does.
 - **Cheap scrolling.** Scrolling a normal text view repaints the text every frame, which cost about 35% CPU in early testing. While prompting, Telelucent draws the text once into small image tiles and just slides them up. It runs at the display's refresh rate only while the text is actually moving, and does nothing otherwise.

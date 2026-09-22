@@ -45,6 +45,12 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
+        syncCaptureHiding()
+    }
+
+    /// Keeps the menu bar icon out of screen shares too, along with the prompter.
+    func syncCaptureHiding() {
+        item.button?.window?.sharingType = Prefs.hideFromCapture ? .none : .readOnly
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -138,8 +144,9 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             ClosureItem("Large") { p.panel.resize(to: NSSize(width: 860, height: 320)) },
             ClosureItem("Move Under Camera") { p.panel.moveToTopCenter() },
             .separator(),
-            ClosureItem("Hide from Screen Sharing", checked: Prefs.hideFromCapture) {
+            ClosureItem("Hide from Screen Sharing", checked: Prefs.hideFromCapture) { [weak self] in
                 update { Prefs.hideFromCapture.toggle() }
+                self?.syncCaptureHiding()
             },
         ]))
 
