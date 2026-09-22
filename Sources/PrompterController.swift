@@ -28,6 +28,8 @@ final class PrompterController: NSObject {
     private var clock: Timer?
     private var countdownTimer: Timer?
     private var countdownLeft = 0
+    /// Whoever was in front before editing, so focus can go straight back to them.
+    private var appBeforeEditing: NSRunningApplication?
 
     override init() {
         view = PrompterView(frame: NSRect(origin: .zero, size: panel.frame.size))
@@ -102,6 +104,8 @@ final class PrompterController: NSObject {
         guard !view.isEditing else { return }
         pause()
         let index = view.characterAtGuide
+        let front = NSWorkspace.shared.frontmostApplication
+        appBeforeEditing = front == .current ? nil : front
         view.isEditing = true
         NSApp.activate(ignoringOtherApps: true)
         show()
@@ -122,7 +126,13 @@ final class PrompterController: NSObject {
         Script.save(view.text)
         view.scroll(toCharacter: caret)
         panel.makeFirstResponder(nil)
-        NSApp.deactivate()
+        if let app = appBeforeEditing, !app.isTerminated {
+            if #available(macOS 14.0, *) { NSApp.yieldActivation(to: app) }
+            app.activate(options: [])
+        } else {
+            NSApp.deactivate()
+        }
+        appBeforeEditing = nil
         updateHUD()
         changed()
     }
