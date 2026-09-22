@@ -16,6 +16,13 @@ final class TextCanvas: NSView {
     /// Called with a delta in points when the user scrolls with a trackpad or wheel.
     var onScroll: ((CGFloat) -> Void)?
 
+    /// Layer changes here must never animate; this also lets them ride along with
+    /// AppKit's own commit instead of needing an extra CATransaction per frame.
+    private static let noAnimations: [String: CAAction] = [
+        "sublayerTransform": NSNull(), "bounds": NSNull(), "position": NSNull(),
+        "contents": NSNull(), "onOrderIn": NSNull(), "onOrderOut": NSNull(), "sublayers": NSNull(),
+    ]
+
     private let host = CALayer()
     private var tiles: [Int: CALayer] = [:]
     private var renderedWidth: CGFloat = -1
@@ -40,7 +47,7 @@ final class TextCanvas: NSView {
         storage.addLayoutManager(layoutManager)
         layoutManager.addTextContainer(container)
         host.masksToBounds = true
-        host.actions = ["sublayerTransform": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        host.actions = Self.noAnimations
         layer = host // layer-hosting: AppKit leaves the tiles alone
         wantsLayer = true
     }
@@ -102,8 +109,6 @@ final class TextCanvas: NSView {
     private func place() {
         let h = Self.tileHeight
         let height = bounds.height
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
         // AppKit flips the hosting layer to match the view, but don't count on it.
         let flipped = host.isGeometryFlipped
         var transform = CATransform3DMakeTranslation(0, flipped ? -offset : offset, 0)
@@ -132,13 +137,13 @@ final class TextCanvas: NSView {
                 }
             }
         }
-        CATransaction.commit()
     }
 
     private func makeTile(_ i: Int) -> CALayer {
         let h = Self.tileHeight
         let scale = window?.backingScaleFactor ?? 2
         let tile = CALayer()
+        tile.actions = Self.noAnimations
         tile.contentsScale = scale
         tiles[i] = tile
         host.addSublayer(tile)

@@ -27,19 +27,21 @@ final class HUDView: PassthroughView {
     let elapsed = makeLabel(size: 11, mono: true)
     let remaining = makeLabel(size: 11, mono: true)
     private let track = NSView()
-    private let fill = NSView()
+    /// A bare layer rather than a view, so moving it every frame skips AppKit layout.
+    private let fill = CALayer()
     private var fraction: CGFloat = 0
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         remaining.alignment = .right
-        for bar in [track, fill] {
-            bar.wantsLayer = true
-            bar.layer?.cornerRadius = 1
-        }
+        track.wantsLayer = true
+        track.layer?.cornerRadius = 1
         track.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
-        fill.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.55).cgColor
-        [elapsed, remaining, track, fill].forEach(addSubview)
+        fill.cornerRadius = 1
+        fill.backgroundColor = NSColor.white.withAlphaComponent(0.55).cgColor
+        fill.actions = ["bounds": NSNull(), "position": NSNull()]
+        track.layer?.addSublayer(fill)
+        [elapsed, remaining, track].forEach(addSubview)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -51,7 +53,7 @@ final class HUDView: PassthroughView {
         set {
             let width = (track.frame.width * newValue).rounded()
             fraction = newValue
-            if fill.frame.width != width { fill.frame.size.width = width }
+            if fill.frame.width != width { fill.frame = CGRect(x: 0, y: 0, width: width, height: 2) }
         }
     }
 
@@ -61,7 +63,7 @@ final class HUDView: PassthroughView {
         elapsed.frame = NSRect(x: 0, y: 0, width: w / 2, height: 16)
         remaining.frame = NSRect(x: w / 2, y: 0, width: w / 2, height: 16)
         track.frame = NSRect(x: 0, y: newSize.height - 2, width: w, height: 2)
-        fill.frame = NSRect(x: 0, y: newSize.height - 2, width: (w * fraction).rounded(), height: 2)
+        fill.frame = CGRect(x: 0, y: 0, width: (w * fraction).rounded(), height: 2)
     }
 }
 
