@@ -27,6 +27,15 @@ final class PrompterPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    /// Resizes around the top edge so the text stays where your eyes already are.
+    func resize(to size: NSSize) {
+        var f = frame
+        f.origin.x = f.midX - size.width / 2
+        f.origin.y = f.maxY - size.height
+        f.size = size
+        setFrame(f, display: true, animate: true)
+    }
+
     /// Parks the panel just under the menu bar, which is where the camera is on a laptop.
     func moveToTopCenter() {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }

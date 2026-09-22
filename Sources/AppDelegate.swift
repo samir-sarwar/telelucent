@@ -3,11 +3,37 @@ import Carbon.HIToolbox
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var prompter: PrompterController!
+    private var statusMenu: StatusMenu!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.mainMenu = makeMainMenu()
         prompter = PrompterController()
+        statusMenu = StatusMenu(prompter: prompter)
+        statusMenu.onShortcutsChanged = { [weak self] in self?.registerHotKeys() }
         registerHotKeys()
         prompter.show()
+    }
+
+    /// There's no menu bar while running as an accessory, but the key equivalents
+    /// still need to exist for copy, paste and undo to work while editing.
+    private func makeMainMenu() -> NSMenu {
+        let main = NSMenu()
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "Quit Telelucent", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        for menu in [appMenu, edit] {
+            let item = NSMenuItem()
+            item.submenu = menu
+            main.addItem(item)
+        }
+        return main
     }
 
     func registerHotKeys() {
