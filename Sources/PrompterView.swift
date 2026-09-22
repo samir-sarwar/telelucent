@@ -7,6 +7,7 @@ final class PrompterView: NSView {
     static let guideFraction: CGFloat = 0.33
 
     let storage = NSTextStorage()
+    private let blurView = NSVisualEffectView()
     let scrollView = NSScrollView()
     let canvas: TextCanvas
     let textView: PromptTextView
@@ -27,6 +28,11 @@ final class PrompterView: NSView {
     private(set) var lineHeight: CGFloat = 40
 
     var opacity: CGFloat = 0.6 { didSet { needsDisplay = true } }
+    var blursBackground = false { didSet { blurView.isHidden = !blursBackground } }
+    var mirrored: Bool {
+        get { canvas.mirrored }
+        set { canvas.mirrored = newValue }
+    }
     var showsGuide = true { didSet { guideView.isHidden = !showsGuide || isEditing } }
     var showsHUD = true {
         didSet {
@@ -88,6 +94,13 @@ final class PrompterView: NSView {
         scrollView.automaticallyAdjustsContentInsets = false
         scrollView.contentInsets = NSEdgeInsets(top: 44, left: 0, bottom: 30, right: 0)
 
+        blurView.material = .hudWindow
+        blurView.blendingMode = .behindWindow
+        blurView.state = .active // stay blurred even though the app is almost never active
+        blurView.maskImage = Self.roundedMask(radius: Self.cornerRadius)
+        blurView.isHidden = true
+        addSubview(blurView)
+
         fadeView.wantsLayer = true
         fadeView.layer?.mask = fadeMask
         fadeView.addSubview(canvas)
@@ -107,6 +120,18 @@ final class PrompterView: NSView {
         toolbar.alphaValue = 0
         grip.alphaValue = 0
         registerForDraggedTypes([.fileURL, .string])
+    }
+
+    private static func roundedMask(radius: CGFloat) -> NSImage {
+        let size = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
     }
 
     func showToast(_ text: String) {
@@ -267,6 +292,7 @@ final class PrompterView: NSView {
     func layoutContents() {
         let b = bounds
         let keep = progress
+        blurView.frame = b
         fadeView.frame = NSRect(x: 0, y: 0, width: b.width, height: textAreaHeight)
         canvas.frame = fadeView.bounds
         scrollView.frame = fadeView.bounds

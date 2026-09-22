@@ -21,6 +21,8 @@ enum Prefs {
     @Pref("wpm") static var wpm: Double = 140
     @Pref("opacity") static var opacity: Double = 0.6
     @Pref("centered") static var centered = false
+    @Pref("mirror") static var mirror = false
+    @Pref("blur") static var blur = false
     @Pref("guide") static var guide = true
     @Pref("hideFromCapture") static var hideFromCapture = true
     @Pref("showTimer") static var showTimer = true

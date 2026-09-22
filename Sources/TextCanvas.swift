@@ -26,6 +26,11 @@ final class TextCanvas: NSView {
         didSet { if offset != oldValue { place() } }
     }
 
+    /// Flip left-to-right, for reading off teleprompter glass.
+    var mirrored = false {
+        didSet { if mirrored != oldValue { place() } }
+    }
+
     override var isFlipped: Bool { true }
     override var mouseDownCanMoveWindow: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -101,7 +106,14 @@ final class TextCanvas: NSView {
         CATransaction.setDisableActions(true)
         // AppKit flips the hosting layer to match the view, but don't count on it.
         let flipped = host.isGeometryFlipped
-        host.sublayerTransform = CATransform3DMakeTranslation(0, flipped ? -offset : offset, 0)
+        var transform = CATransform3DMakeTranslation(0, flipped ? -offset : offset, 0)
+        if mirrored {
+            // Sublayer transforms pivot on the anchor point, so flip around the middle from there.
+            let center = bounds.width * (0.5 - host.anchorPoint.x)
+            transform = CATransform3DConcat(transform, CATransform3DConcat(CATransform3DMakeScale(-1, 1, 1),
+                                                                         CATransform3DMakeTranslation(center * 2, 0, 0)))
+        }
+        host.sublayerTransform = transform
 
         if textHeight > 0 && height > 0 {
             let margin = h / 2

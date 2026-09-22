@@ -69,6 +69,8 @@ final class PrompterController: NSObject {
     func applyPrefs() {
         panel.sharingType = Prefs.hideFromCapture ? .none : .readOnly
         view.opacity = Prefs.opacity
+        view.blursBackground = Prefs.blur
+        view.mirrored = Prefs.mirror
         view.showsGuide = Prefs.guide
         view.setStyle(fontSize: Prefs.fontSize, centered: Prefs.centered)
         updateHUD()

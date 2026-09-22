@@ -125,7 +125,10 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                     update { Prefs.opacity = value }
                 }
             }),
+            ClosureItem("Blur Behind", checked: Prefs.blur) { update { Prefs.blur.toggle() } },
+            .separator(),
             ClosureItem("Center Text", checked: Prefs.centered) { update { Prefs.centered.toggle() } },
+            ClosureItem("Mirror Text", checked: Prefs.mirror) { update { Prefs.mirror.toggle() } },
             ClosureItem("Reading Guide", checked: Prefs.guide) { update { Prefs.guide.toggle() } },
         ]))
 
